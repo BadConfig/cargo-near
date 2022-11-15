@@ -29,54 +29,57 @@ pub(crate) fn generate_abi(
     generate_docs: bool,
     hide_warnings: bool,
     color: ColorPreference,
+    sdk_checks: bool,
 ) -> anyhow::Result<AbiRoot> {
-    let root_node = crate_metadata
-        .raw_metadata
-        .resolve
-        .as_ref()
-        .and_then(|dep_graph| {
-            dep_graph
-            .nodes
-            .iter()
-            .find(|node| node.id == crate_metadata.root_package.id)
-        })
-        .ok_or_else(|| anyhow::anyhow!("unable to appropriately resolve the dependency graph, perhaps your `Cargo.toml` file is malformed"))?;
-
-    let near_sdk_dep = root_node
-        .deps
-        .iter()
-        .find(|dep| dep.name == "near_sdk")
-        .and_then(|near_sdk| {
-            crate_metadata
-                .raw_metadata
-                .packages
+    if sdk_checks {
+        let root_node = crate_metadata
+            .raw_metadata
+            .resolve
+            .as_ref()
+            .and_then(|dep_graph| {
+                dep_graph
+                .nodes
                 .iter()
-                .find(|pkg| pkg.id == near_sdk.pkg)
-        })
-        .ok_or_else(|| anyhow::anyhow!("`near-sdk` dependency not found"))?;
+                .find(|node| node.id == crate_metadata.root_package.id)
+            })
+            .ok_or_else(|| anyhow::anyhow!("unable to appropriately resolve the dependency graph, perhaps your `Cargo.toml` file is malformed"))?;
 
-    for required_feature in ["__abi-generate", "__abi-embed"] {
-        if !near_sdk_dep.features.contains_key(required_feature) {
-            anyhow::bail!("unsupported `near-sdk` version. expected 4.1.* or higher");
-        }
-    }
-
-    let near_sdk_metadata = crate_metadata
-        .root_package
-        .dependencies
-        .iter()
-        .find(|dep| dep.name == "near-sdk")
-        .ok_or_else(|| anyhow::anyhow!("`near-sdk` dependency not found"))?;
-
-    // `Dependency::features` return value does not contain default features, so we have to check
-    // for default features separately.
-    if !near_sdk_metadata.uses_default_features
-        && !near_sdk_metadata
-            .features
+        let near_sdk_dep = root_node
+            .deps
             .iter()
-            .any(|feature| feature == "abi")
-    {
-        anyhow::bail!("`near-sdk` dependency must have the `abi` feature enabled")
+            .find(|dep| dep.name == "near_sdk")
+            .and_then(|near_sdk| {
+                crate_metadata
+                    .raw_metadata
+                    .packages
+                    .iter()
+                    .find(|pkg| pkg.id == near_sdk.pkg)
+            })
+            .ok_or_else(|| anyhow::anyhow!("`near-sdk` dependency not found"))?;
+
+        for required_feature in ["__abi-generate", "__abi-embed"] {
+            if !near_sdk_dep.features.contains_key(required_feature) {
+                anyhow::bail!("unsupported `near-sdk` version. expected 4.1.* or higher");
+            }
+        }
+
+        let near_sdk_metadata = crate_metadata
+            .root_package
+            .dependencies
+            .iter()
+            .find(|dep| dep.name == "near-sdk")
+            .ok_or_else(|| anyhow::anyhow!("`near-sdk` dependency not found"))?;
+
+        // `Dependency::features` return value does not contain default features, so we have to check
+        // for default features separately.
+        if !near_sdk_metadata.uses_default_features
+            && !near_sdk_metadata
+                .features
+                .iter()
+                .any(|feature| feature == "abi")
+        {
+            anyhow::bail!("`near-sdk` dependency must have the `abi` feature enabled")
+        }
     }
 
     util::print_step("Generating ABI");
@@ -194,7 +197,7 @@ pub(crate) fn run(args: AbiCommand) -> anyhow::Result<()> {
     } else {
         AbiFormat::Json
     };
-    let contract_abi = generate_abi(&crate_metadata, args.doc, false, args.color)?;
+    let contract_abi = generate_abi(&crate_metadata, args.doc, false, args.color, !args.no_sdk_checks)?;
     let AbiResult { path } =
         write_to_file(&contract_abi, &crate_metadata, format, AbiCompression::NoOp)?;
 

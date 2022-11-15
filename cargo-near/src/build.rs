@@ -42,7 +42,7 @@ pub(crate) fn run(args: BuildCommand) -> anyhow::Result<()> {
     let mut abi = None;
     let mut min_abi_path = None;
     if !args.no_abi {
-        let mut contract_abi = abi::generate_abi(&crate_metadata, args.doc, true, args.color)?;
+        let mut contract_abi = abi::generate_abi(&crate_metadata, args.doc, true, args.color, !args.no_sdk_checks)?;
         contract_abi.metadata.build = Some(BuildInfo {
             compiler: format!("rustc {}", rustc_version::version()?),
             builder: format!("cargo-near {}", env!("CARGO_PKG_VERSION")),

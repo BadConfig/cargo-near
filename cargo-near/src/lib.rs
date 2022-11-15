@@ -41,6 +41,9 @@ pub struct AbiCommand {
     /// Generate compact (minified) JSON
     #[clap(long)]
     pub compact_abi: bool,
+    /// Ignore checking near_sdk version (may cause sigfault)
+    #[clap(long)]
+    pub no_sdk_checks: bool,
     /// Copy final artifacts to this directory
     #[clap(long, parse(from_str), value_name = "PATH")]
     pub out_dir: Option<Utf8PathBuf>,
@@ -64,6 +67,9 @@ pub struct BuildCommand {
     /// Embed the ABI in the contract binary
     #[clap(long)]
     pub embed_abi: bool,
+    /// Ignore checking near_sdk version (may cause sigfault)
+    #[clap(long)]
+    pub no_sdk_checks: bool,
     /// Include rustdocs in the embedded ABI
     #[clap(long)]
     pub doc: bool,
